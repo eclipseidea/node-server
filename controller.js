@@ -42,13 +42,23 @@ app.get('/', (req, res) => {
 })
 
 //віддаємо масив юзерів
-app.get('/users/', (req, res) => {
+app.get('/users/:par', (req, res) => {
     pool.getConnection()
         .then(conn => {
-            conn.query("select * from userslist")
+            conn.query(`SELECT * FROM userslist limit ${req.params.par}`)
                 .then((rows) => {
-                    res.send(rows);
-                    conn.end();
+                    conn.query(`SELECT COUNT(*) AS namesCount FROM userslist`)
+                        .then(_res =>{
+                            let model = {
+                                rows:rows,
+                                length:_res[0].namesCount
+                            }
+                            res.json(model);
+                            conn.end();
+                        }).catch(err => {
+                        res.send(err);
+                        conn.end();
+                    })
                 })
                 .catch(err => {
                     res.send(err);
@@ -61,7 +71,7 @@ app.get('/users/', (req, res) => {
 })
 
 //віддаємо юзера по id для редагування
-app.get('/getUser/:id/', (req, res) => {
+app.get('/getUser/id/', (req, res) => {
     pool.getConnection()
         .then(conn => {
             conn.query(`SELECT Id,FirstName,LastName,Email,Password FROM userslist WHERE Id = ?`,
@@ -85,10 +95,10 @@ app.post('/addUser/', (req, res) => {
     pool.getConnection()
         .then(conn => {
             conn.query('INSERT INTO userslist (FirstName,LastName,Email,Password) VALUES (?,?,?,?)',
-                [req.body.name, req.body.lastName, req.body.email, req.body.password]
+                [req.body.firstName, req.body.lastName, req.body.email, req.body.password]
             )
-                .then(() => {
-                    res.json(200);
+                .then((result) => {
+                    res.json(result);
                     conn.end();
                 })
                 .catch(() => {
@@ -101,7 +111,7 @@ app.post('/addUser/', (req, res) => {
     });
 })
 
-// видаляємо юзера по id
+// видаляємо юзера  по id
 app.delete(`/deleteUser/:id`, (req, res) => {
     pool.getConnection()
         .then(conn => {
@@ -125,7 +135,7 @@ app.put('/updateUser/:id/', (req, res) => {
     pool.getConnection()
         .then(conn => {
             conn.query(`UPDATE userslist SET FirstName=?,LastName=?,Email=?,Password =? WHERE Id = ${id}`,
-                [req.body.name, req.body.lastName, req.body.email, req.body.password])
+                [req.body.firstName, req.body.lastName, req.body.email, req.body.password])
                 .then(() => {
                     res.json(200);
                     conn.end()
